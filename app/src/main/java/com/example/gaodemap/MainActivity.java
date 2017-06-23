@@ -67,11 +67,12 @@ public class MainActivity extends AppCompatActivity implements RouteSearch.OnRou
         v = LayoutInflater.from(this).inflate(R.layout.lv, null, false);
         lv= (ListView) v.findViewById(R.id.lv);
         actionBar = getActionBar();
+
+
         //获取地图控件引用
         mMapView = (MapView) findViewById(R.id.map);
         //在activity执行onCreate时执行mMapView.onCreate(savedInstanceState)，创建地图
         mMapView.onCreate(savedInstanceState);
-
         aMap = mMapView.getMap();
 
         //设置Logo位置  缩放按钮显示
@@ -79,13 +80,19 @@ public class MainActivity extends AppCompatActivity implements RouteSearch.OnRou
         uiSettings.setLogoBottomMargin(-100);
         uiSettings.setZoomControlsEnabled(false);
 
+        //定位
+        orientation();
+
+        //添加marker覆盖物
         MarkerOptions markerOptions = new MarkerOptions();
         latLng = new LatLng(39.908860, 116.397390);
         markerOptions.position(latLng)
-                .icon(BitmapDescriptorFactory.fromResource(R.mipmap.ic_launcher))
+                .icon(BitmapDescriptorFactory.fromResource(R.drawable.dog))
                 .alpha(0.6f)
                  .title("marker");
         aMap.addMarker(markerOptions);
+
+        //设置窗口信息
         aMap.setInfoWindowAdapter(this);
 
 
@@ -100,13 +107,12 @@ public class MainActivity extends AppCompatActivity implements RouteSearch.OnRou
        aMap.setOnMapClickListener(new AMap.OnMapClickListener() {
            @Override
            public void onMapClick(LatLng latLng) {
-               if (dialog!=null&&dialog.isShowing()){
-                   dialog.dismiss();
-               }
+
                mk.hideInfoWindow();
            }
        });
 
+        //设置窗口监听，进行导航
         aMap.setOnInfoWindowClickListener(new AMap.OnInfoWindowClickListener() {
             @Override
             public void onInfoWindowClick(Marker marker) {
@@ -127,15 +133,19 @@ public class MainActivity extends AppCompatActivity implements RouteSearch.OnRou
 
     }
 
+    /*
+    * 初始化Dialog，如果手机有高德、百度、腾讯地图app  Dialog上会显示
+    * 点击Dialog上的条目，调用手机上的app地图进行导航
+    * 如果手机上没有地图APP，调用高德自带的地图进行导航
+    * */
     private void initdl(boolean b) {
         if(b){
            flag=false;
-            boolean avilibleqq = isAvilible(MainActivity.this, "com.tencent.map1");
+            boolean avilibleqq = isAvilible(MainActivity.this, "com.tencent.map");
             boolean aviliblenavi = isAvilible(MainActivity.this, "com.autonavi.minimap");
             boolean aviliblebd = isAvilible(MainActivity.this, "com.baidu.BaiduMap");
             list=new ArrayList<>();
             if(aviliblebd){
-
                 list.add("百度地图");
             }
             if(avilibleqq){
@@ -143,15 +153,14 @@ public class MainActivity extends AppCompatActivity implements RouteSearch.OnRou
             }
             if(aviliblenavi){
                 list.add("高德地图");
-            }else{
-                geocodeSearch = new GeocodeSearch(MainActivity.this);
-                geocodeSearch.setOnGeocodeSearchListener(this);
-                //通过GeocodeQuery设置查询参数,调用getFromLocationNameAsyn(GeocodeQuery geocodeQuery) 方法发起请求。
-                //address表示地址，第二个参数表示查询城市，中文或者中文全拼，citycode、adcode都ok
-                GeocodeQuery query = new GeocodeQuery("天安门", "010");
-                geocodeSearch.getFromLocationNameAsyn(query);
-                flag=true;
-                return;
+            }
+            if(!aviliblebd&&avilibleqq&&aviliblenavi){
+                /*
+                *当手机上没有地图app，调用高德自带的地图进行导航
+                *
+                * 逆地理编码方法
+                 */
+                Inverse_geographic();
             }
 
             ArrayAdapter adapter=new ArrayAdapter(MainActivity.this,android.R.layout.simple_list_item_1,list);
@@ -179,6 +188,9 @@ public class MainActivity extends AppCompatActivity implements RouteSearch.OnRou
                             startActivity(naviIntent);
                         }
                     }
+
+                    dialog.dismiss();
+
                 }
 
             });
@@ -187,6 +199,18 @@ public class MainActivity extends AppCompatActivity implements RouteSearch.OnRou
             dialog = builder.create();
         }
 
+    }
+
+    //逆地理编码方法
+    public void Inverse_geographic(){
+        geocodeSearch = new GeocodeSearch(MainActivity.this);
+        geocodeSearch.setOnGeocodeSearchListener(this);
+        //通过GeocodeQuery设置查询参数,调用getFromLocationNameAsyn(GeocodeQuery geocodeQuery) 方法发起请求。
+        //address表示地址，第二个参数表示查询城市，中文或者中文全拼，citycode、adcode都ok
+        GeocodeQuery query = new GeocodeQuery("天安门", "010");
+        geocodeSearch.getFromLocationNameAsyn(query);
+        flag=true;
+        return;
     }
 
     @Override
@@ -220,25 +244,31 @@ public class MainActivity extends AppCompatActivity implements RouteSearch.OnRou
         return super.onCreateOptionsMenu(menu);
     }
 
+    //定位
+    public void orientation(){
+        MyLocationStyle myLocationStyle;
+        myLocationStyle = new MyLocationStyle();//初始化定位蓝点样式类myLocationStyle.myLocationType(MyLocationStyle.LOCATION_TYPE_LOCATION_ROTATE);//连续定位、且将视角移动到地图中心点，定位点依照设备方向旋转，并且会跟随设备移动。（1秒1次定位）如果不设置myLocationType，默认也会执行此种模式。
+        myLocationStyle.interval(999999999); //设置连续定位模式下的定位间隔，只在连续定位模式下生效，单次定位模式下不会生效。单位为毫秒。
+        aMap.setMyLocationStyle(myLocationStyle);//设置定位蓝点的Style
+        //aMap.getUiSettings().setMyLocationButtonEnabled(true);设置默认定位按钮是否显示，非必需设置。
+        aMap.setMyLocationEnabled(true);// 设置为true表示启动显示定位蓝点，false表示隐藏定位蓝点并不进行定位，默认是false。
+
+        aMap.setOnMyLocationChangeListener(new AMap.OnMyLocationChangeListener() {
+            @Override
+            public void onMyLocationChange(Location location) {
+                double latitude = location.getLatitude();
+                double longitude = location.getLongitude();
+                myLatLng = new LatLng(latitude, longitude);
+            }
+        });
+    }
+
+
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()){
             case location:
-                MyLocationStyle myLocationStyle;
-                myLocationStyle = new MyLocationStyle();//初始化定位蓝点样式类myLocationStyle.myLocationType(MyLocationStyle.LOCATION_TYPE_LOCATION_ROTATE);//连续定位、且将视角移动到地图中心点，定位点依照设备方向旋转，并且会跟随设备移动。（1秒1次定位）如果不设置myLocationType，默认也会执行此种模式。
-                myLocationStyle.interval(999999999); //设置连续定位模式下的定位间隔，只在连续定位模式下生效，单次定位模式下不会生效。单位为毫秒。
-                aMap.setMyLocationStyle(myLocationStyle);//设置定位蓝点的Style
-                //aMap.getUiSettings().setMyLocationButtonEnabled(true);设置默认定位按钮是否显示，非必需设置。
-                aMap.setMyLocationEnabled(true);// 设置为true表示启动显示定位蓝点，false表示隐藏定位蓝点并不进行定位，默认是false。
-
-                aMap.setOnMyLocationChangeListener(new AMap.OnMyLocationChangeListener() {
-                    @Override
-                    public void onMyLocationChange(Location location) {
-                        double latitude = location.getLatitude();
-                        double longitude = location.getLongitude();
-                        myLatLng = new LatLng(latitude, longitude);
-                    }
-                });
+                orientation();
                 break;
 
             case R.id.in_door:
@@ -304,11 +334,13 @@ public class MainActivity extends AppCompatActivity implements RouteSearch.OnRou
         return packageNames.contains(packageName);
     }
 
-    //result里面有你想要的结果.
+    //地理编码回调方法
     @Override
     public void onRegeocodeSearched(RegeocodeResult result, int rCode) {
 
     }
+
+    //逆地理编码回调方法
     @Override
     public void onGeocodeSearched(GeocodeResult result, int rCode) {
         LatLonPoint latLonPoint = result.getGeocodeAddressList().get(0).getLatLonPoint();
@@ -322,6 +354,7 @@ public class MainActivity extends AppCompatActivity implements RouteSearch.OnRou
         intent.putExtra("bundle",bundle);
         startActivity(intent);
     }
+
 
     @Override
     public View getInfoWindow(Marker marker) {
