@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <item android:id="@+id/location"
+        app:showAsAction="always"
+        android:title="定位"></item>
+
+    <item android:id="@+id/in_door"
+        app:showAsAction="ifRoom"
+        android:title="室内"></item>
+
+    <item android:id="@+id/night"
+        app:showAsAction="ifRoom"
+        android:title="夜景"></item>
+
+    <item android:id="@+id/weixing"
+        app:showAsAction="ifRoom"
+        android:title="卫星"></item>
+
+    <item android:id="@+id/navi"
+        app:showAsAction="ifRoom"
+        android:title="导航"></item>
+
+    <item android:id="@+id/guihua"
+        app:showAsAction="ifRoom"
+        android:title="路线规划"></item>
+</menu>
